@@ -45,4 +45,4 @@ def chat():
         return jsonify({"error": "Failed to get response from the external API"}), response.status_code
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5001)
