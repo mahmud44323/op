@@ -19,7 +19,7 @@ def check_user():
     headers = {
         "X-KM-User-AspId": "100012345612345",
         "X-KM-User-Agent": "ANDROID/1164",
-        "X-KM-DEVICE-FGP": "19DC58E052A91F5B2EB59399AABB2B898CA68CFE780878C0DB69EAAB0553C3C6",
+        "X-KM-DEVICE-FGP": "4B3CBA66592A037F7B7E60F515B6212368476339DC7F019E31D99D293250B23C",
         "X-KM-Accept-language": "bn",
         "X-KM-AppCode": "01"
     }
