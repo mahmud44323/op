@@ -1,7 +1,7 @@
 import re
 import requests
 from telegram import Update, InputFile
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
 from io import BytesIO
 
 # Replace 'YOUR_BOT_TOKEN' with your Telegram bot token
@@ -87,6 +87,36 @@ def handle_message(update: Update, context: CallbackContext):
                     update.message.reply_photo(photo=image_file)
                 else:
                     update.message.reply_text("Failed to download the image.")
+            else:
+                update.message.reply_text("Could not find an image URL in the response.")
+        else:
+            update.message.reply_text("An error occurred with the API request.")
+    else:
+        # If user hasn't started the bot, prompt them to do so
+        update.message.reply_text("Please use /start first to begin.")
+
+# Define the main function to set up the bot
+def main():
+    # Create the Updater and pass it your bot's token
+    updater = Updater(TELEGRAM_BOT_TOKEN)
+
+    # Get the dispatcher to register handlers
+    dispatcher = updater.dispatcher
+
+    # Register the command handler for /start
+    dispatcher.add_handler(CommandHandler('start', start))
+    
+    # Register the message handler for generating images
+    dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    # Start the bot
+    updater.start_polling()
+
+    # Run the bot until you press Ctrl-C or the process is terminated
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
             else:
                 update.message.reply_text("Could not find an image URL in the response.")
         else:
