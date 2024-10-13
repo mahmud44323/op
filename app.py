@@ -1,4 +1,11 @@
+import re
 import requests
+from telegram import Update, InputFile
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from io import BytesIO
+
+# Replace 'YOUR_BOT_TOKEN' with your Telegram bot token
+TELEGRAM_BOT_TOKEN = '7615742646:AAFhMMzt978vsaL64Zcr1Fh06WYz1TJM9V4'
 
 # Set up the request URL and headers
 url = 'https://www.blackbox.ai/api/chat'
@@ -7,7 +14,7 @@ headers = {
     'accept': '*/*',
     'accept-language': 'en-SG,en-GB;q=0.9,en-US;q=0.8,en;q=0.7',
     'content-type': 'application/json',
-    'cookie': 'sessionId=21b9cdf9-df30-486f-b114-0d34c05b5c42; __Host-authjs.csrf-token=4ad540eaacdf8603762296d14b2ce880a5af772d821dfe7fec6f814999bb8e4d%7C8ee5274a727bc70dc30214a7a2d8bb05ea4cfb2f00dda5f2451566ee38751058; __Secure-authjs.callback-url=https%3A%2F%2Fwww.blackbox.ai; intercom-id-jlmqxicb=fce17476-95ad-423f-8ba5-6ad568a0cc33; intercom-session-jlmqxicb=; intercom-device-id-jlmqxicb=10662a8f-63f9-4918-8356-45a78bbbecff',
+    'cookie': 'sessionId=21b9cdf9-df30-486f-b114-0d34c05b5c42; __Host-authjs.csrf-token=...',
     'origin': 'https://www.blackbox.ai',
     'referer': 'https://www.blackbox.ai/agent/ImageGenerationLV45LJp',
     'sec-ch-ua': '"Not-A.Brand";v="99", "Chromium";v="124"',
@@ -19,36 +26,94 @@ headers = {
     'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
 }
 
-# Collect user input for the message content
-user_content = input("Enter your message content: ")
+# Dictionary to keep track of users who have started the bot
+user_started = {}
 
-# Set up the data payload with dynamic content input
-data = {
-    "messages": [
-        {"id": "user-message", "content": user_content, "role": "user"}
-    ],
-    "id": "unique-id",
-    "previewToken": None,
-    "userId": None,
-    "codeModelMode": True,
-    "agentMode": {"mode": True, "id": "ImageGenerationLV45LJp", "name": "Image Generation"},
-    "trendingAgentMode": {},
-    "isMicMode": False,
-    "maxTokens": 1024,
-    "playgroundTopP": None,
-    "playgroundTemperature": None,
-    "isChromeExt": False,
-    "githubToken": None,
-    "clickedAnswer2": False,
-    "clickedAnswer3": False,
-    "clickedForceWebSearch": False,
-    "visitFromDelta": False,
-    "mobileClient": False,
-    "userSelectedModel": None
-}
+# Define the /start command handler
+def start(update: Update, context: CallbackContext):
+    user_id = update.message.chat_id
+    user_started[user_id] = True
+    update.message.reply_text("Welcome! Please enter your text to generate an image.")
 
-# Send the request
-response = requests.post(url, headers=headers, json=data)
+# Define the message handler for generating images
+def handle_message(update: Update, context: CallbackContext):
+    user_id = update.message.chat_id
+    
+    # Check if the user has used /start
+    if user_started.get(user_id):
+        # Get user message content
+        user_content = update.message.text
 
-# Print the response
-print(response.text)
+        # Set up the data payload with dynamic content input
+        data = {
+            "messages": [
+                {"id": "user-message", "content": user_content, "role": "user"}
+            ],
+            "id": "unique-id",
+            "previewToken": None,
+            "userId": None,
+            "codeModelMode": True,
+            "agentMode": {"mode": True, "id": "ImageGenerationLV45LJp", "name": "Image Generation"},
+            "trendingAgentMode": {},
+            "isMicMode": False,
+            "maxTokens": 1024,
+            "playgroundTopP": None,
+            "playgroundTemperature": None,
+            "isChromeExt": False,
+            "githubToken": None,
+            "clickedAnswer2": False,
+            "clickedAnswer3": False,
+            "clickedForceWebSearch": False,
+            "visitFromDelta": False,
+            "mobileClient": False,
+            "userSelectedModel": None
+        }
+
+        # Send the request
+        response = requests.post(url, headers=headers, json=data)
+        
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Use regex to extract the image URL
+            match = re.search(r'https://storage\.googleapis\.com/[^\s\)]+', response.text)
+            if match:
+                image_url = match.group(0)
+                # Download the image
+                image_response = requests.get(image_url)
+                if image_response.status_code == 200:
+                    # Send the image as a file to the user
+                    image_file = BytesIO(image_response.content)
+                    image_file.name = 'generated_image.jpg'
+                    update.message.reply_photo(photo=image_file)
+                else:
+                    update.message.reply_text("Failed to download the image.")
+            else:
+                update.message.reply_text("Could not find an image URL in the response.")
+        else:
+            update.message.reply_text("An error occurred with the API request.")
+    else:
+        # If user hasn't started the bot, prompt them to do so
+        update.message.reply_text("Please use /start first to begin.")
+
+# Define the main function to set up the bot
+def main():
+    # Create the Updater and pass it your bot's token
+    updater = Updater(TELEGRAM_BOT_TOKEN)
+
+    # Get the dispatcher to register handlers
+    dispatcher = updater.dispatcher
+
+    # Register the command handler for /start
+    dispatcher.add_handler(CommandHandler('start', start))
+    
+    # Register the message handler for generating images
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+
+    # Start the bot
+    updater.start_polling()
+
+    # Run the bot until you press Ctrl-C or the process is terminated
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
